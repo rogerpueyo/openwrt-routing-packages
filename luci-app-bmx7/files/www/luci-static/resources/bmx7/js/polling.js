@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011 Pau Escrich <pau@dabax.net>
+    Copyright © 2011 Pau Escrich <pau@dabax.net>
     Contributors Lluis Esquerda <eskerda@gmail.com>
 
     This program is free software; you can redistribute it and/or modify
@@ -20,16 +20,17 @@
     the file called "COPYING".
 */
 
-		
+
 /*
 	Table pooler is a function to easy call XHR poller. 
 
-		new TablePooler(5,"/cgi-bin/bmx6-info", {'status':''}, "status_table", function(st){
-			var table = Array()
-			table.push(st.first,st.second)
-			return table
-		}
-	Parameters are: 
+	new TablePooler(5,"/cgi-bin/bmx7-info", {'status':''}, "status_table", function(st){
+		var table = Array()
+		table.push(st.first,st.second)
+		return table
+	}
+
+	The parameters are: 
 		polling_time: time between pollings
 		json_url: the json url to fetch the data
 		json_call: the json call
@@ -40,42 +41,40 @@
 	In the code st is the data obtained from the json call
 */
 
-	function TablePooler (time, jsonurl, getparams, table_id, callback) {
-		this.table = document.getElementById(table_id);
-		this.callback = callback;
-		this.jsonurl = jsonurl;
-		this.getparams = getparams;
-		this.time = time;
+function TablePooler (time, jsonurl, getparams, table_id, callback) {
+	this.table = document.getElementById(table_id);
+	this.callback = callback;
+	this.jsonurl = jsonurl;
+	this.getparams = getparams;
+	this.time = time;
 
-		this.clear = function(){
-                  	/* clear all rows */
-                  	while( this.table.rows.length > 1 ) this.table.deleteRow(1);
-		}
-		this.start = function(){
-			XHR.poll(this.time, this.jsonurl, this.getparams, function(x, st){
-				var data = this.callback(st);
-				var content, tr, td;
-				this.clear();
-				for (var i = 0; i < data.length; i++){
-					tr = this.table.insertRow(-1);
-					tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
-						
-					for (var j = 0; j < data[i].length; j++){
-						td = tr.insertCell(-1);
-						if (data[i][j].length == 2) {
-							td.colSpan = data[i][j][1];
-							content = data[i][j][0];
-						}
-						else content = data[i][j];
-						td.innerHTML = content;
+	/* clear all rows */
+	this.clear = function(){
+		while( this.table.rows.length > 1 ) this.table.deleteRow(1);
+	}
+
+	this.start = function(){
+		XHR.poll(this.time, this.jsonurl, this.getparams, function(x, st){
+			var data = this.callback(st);
+			var content, tr, td;
+			this.clear();
+			for (var i = 0; i < data.length; i++){
+				tr = this.table.insertRow(-1);
+				tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
+
+				for (var j = 0; j < data[i].length; j++){
+					td = tr.insertCell(-1);
+					if (data[i][j].length == 2) {
+						td.colSpan = data[i][j][1];
+						content = data[i][j][0];
 					}
+					else content = data[i][j];
+					td.innerHTML = content;
 				}
-			}.bind(this));
-		}
-
-
-		this.start();
+			}
+		}.bind(this));
 	}
 
 
-
+	this.start();
+}

@@ -1,6 +1,7 @@
 #!/bin/sh
-#    Copyright (C) 2011 Pau Escrich
+#    Copyright © 2011 Pau Escrich
 #    Contributors Jo-Philipp Wich <xm@subsignal.org>
+#                 Roger Pueyo Centelles <roger.pueyo@guifi.net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,12 +20,12 @@
 #    The full GNU General Public License is included in this distribution in
 #    the file called "COPYING".
 #
-#    This script gives information about bmx6
-#    Can be executed from a linux shell: ./bmx6-info -s links
-#    Or from web interfae (with cgi enabled): http://host/cgi-bin/bmx6-info?links
+#    This script gives information about bmx7
+#    Can be executed from a linux shell: ./bmx7-info -s links
+#    Or from web interfae (with cgi enabled): http://host/cgi-bin/bmx7-info?links
 #    If you ask for a directory you wil get the directory contents in JSON forman
 
-BMX6_DIR="$(uci get bmx6.general.runtimeDir 2>/dev/null)" || BMX6_DIR="/var/run/bmx6/json"
+BMX7_DIR="$(uci get bmx7.general.runtimeDir 2>/dev/null)" || BMX7_DIR="/var/run/bmx7/json"
 
 #Checking if shell mode or cgi-bin mode
 if [ "$1" == "-s" ]; then
@@ -39,20 +40,26 @@ fi
 check_path() {
         [ -d "$1" ] && path=$(cd $1; pwd)
         [ -f "$1" ] && path=$(cd $1/..; pwd)
-        [ $(echo "$path" | grep -c "^$BMX6_DIR") -ne 1 ] && exit 1
+        [ $(echo "$path" | grep -c "^$BMX7_DIR") -ne 1 ] && exit 1
+}
+
+print_mem() {
+	echo -n '{ "memory": { "bmx7": "'
+	cat /proc/$(cat /var/run/bmx7/pid)/status |grep -i VmSize | tr -s " " | cut -d " " -f 2,3 | tr -d "\n"
+	echo '"}}'
 }
 
 print_query() {
 	# If the query is a directory
-	[ -d "$BMX6_DIR/$1" ] &&
+	[ -d "$BMX7_DIR/$1" ] &&
         {
 	# If /all has not been specified
 		[ -z "$QALL" ] &&
 		{
-		total=$(ls $BMX6_DIR/$1 | wc -w)
+		total=$(ls $BMX7_DIR/$1 | wc -w)
 		i=1
         	echo -n "{ \"$1\": [ "
-	        for f in $(ls $BMX6_DIR/$1); do
+	        for f in $(ls $BMX7_DIR/$1); do
 			echo -n "{ \"name\": \"$f\" }"
 			[ $i -lt $total ]  && echo -n ','
 			i=$(( $i + 1 ))
@@ -63,7 +70,7 @@ print_query() {
 		} || {
 		comma=""
 		echo -n "[ "
-		for entry in "$BMX6_DIR/$1/"*; do
+		for entry in "$BMX7_DIR/$1/"*; do
 			[ -f "$entry" ] &&
 			{
 				${comma:+echo "$comma"}
@@ -76,7 +83,7 @@ print_query() {
         }
 
 	# If the query is a file, just printing the file
-	[ -f "$BMX6_DIR/$1" ] && cat "$BMX6_DIR/$1";
+	[ -f "$BMX7_DIR/$1" ] && cat "$BMX7_DIR/$1";
 }
 
 if [ "${QUERY##*/}" == "all" ]; then
@@ -89,6 +96,10 @@ if [ "$QUERY" == '$info' ]; then
 	print_query status
 	echo -n ","
 	print_query interfaces
+	echo -n ","
+	print_query links
+	echo -n ","
+	print_mem
 	echo "] }"
 fi
 
@@ -104,16 +115,22 @@ if [ "$QUERY" == '$neighbours' ]; then
 	exit 0
 
 else if [ "$QUERY" == '$tunnels' ]; then
-	bmx6 -c --jshow tunnels /r=0
+	bmx7 -c --jshow tunnels /r=0
 	exit 0
 
-else
-	check_path "$BMX6_DIR/$QUERY"
-	print_query $QUERY
-	exit 0
+	else if [ "$QUERY" == '$originators' ]; then
+		bmx7 -c --jshow originators /r=0
+		exit 0
+
+		else
+		check_path "$BMX7_DIR/$QUERY"
+		print_query $QUERY
+		exit 0
+		fi
+	fi
 fi
 fi
 
-ls -1F "$BMX6_DIR"
+ls -1F "$BMX7_DIR"
 exit 0
 
